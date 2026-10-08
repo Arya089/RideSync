@@ -1,0 +1,48 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ridesync
+
+  datasource:
+    url: jdbc:postgresql://localhost:55432/ridesync
+    username: ridesync
+    password: ridesync123
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: ridesync-app
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.ridesync.*"
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-me-to-a-long-random-string-at-least-32-bytes-long}
+    access-token-expiry-ms: 900000
+    refresh-token-expiry-ms: 604800000
+
+logging:
+  level:
+    com.ridesync: DEBUG
+    org.hibernate.SQL: DEBUG
