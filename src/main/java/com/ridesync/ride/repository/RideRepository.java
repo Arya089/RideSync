@@ -2,6 +2,7 @@ package com.ridesync.ride.repository;
 
 import com.ridesync.ride.entity.Ride;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -34,4 +35,17 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
                       @Param("fromTime") Instant fromTime,
                       @Param("toTime") Instant toTime,
                       @Param("radiusMeters") double radiusMeters);
+
+    // Atomic seat reservation: the WHERE clause makes it impossible to go below zero,
+    // even if the Redis lock were to fail. Returns 0 rows if not enough seats.
+    @Modifying
+    @Query("update Ride r set r.availableSeats = r.availableSeats - :seats "
+            + "where r.id = :id and r.availableSeats >= :seats and r.status = :status")
+    int reserveSeats(@Param("id") Long id, @Param("seats") int seats,
+                     @Param("status") Ride.Status status);
+
+    @Modifying
+    @Query("update Ride r set r.availableSeats = r.availableSeats + :seats "
+            + "where r.id = :id and r.availableSeats + :seats <= r.totalSeats")
+    int releaseSeats(@Param("id") Long id, @Param("seats") int seats);
 }
