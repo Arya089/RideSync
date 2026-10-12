@@ -41,6 +41,13 @@ app:
     secret: ${JWT_SECRET:change-me-to-a-long-random-string-at-least-32-bytes-long}
     access-token-expiry-ms: 86400000
     refresh-token-expiry-ms: 604800000
+  payment:
+    mock: ${PAYMENT_MOCK:true}
+    key-id: ${RAZORPAY_KEY_ID:rzp_test_mock}
+    key-secret: ${RAZORPAY_KEY_SECRET:mock_secret}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:mock_webhook_secret}
+  booking:
+    pending-expiry-minutes: ${BOOKING_EXPIRY_MINUTES:15}
 
 logging:
   level:

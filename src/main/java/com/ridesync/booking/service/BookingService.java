@@ -78,6 +78,24 @@ public class BookingService {
         }
     }
 
+    /**
+     * Called by the expiry job for unpaid bookings. The atomic PENDING -> CANCELLED flip decides
+     * the winner against a concurrent payment: only the winner touches the seat count.
+     */
+    public void expire(Long bookingId) {
+        tx.executeWithoutResult(status -> {
+            Booking booking = bookingRepository.findById(bookingId).orElse(null);
+            if (booking == null) {
+                return;
+            }
+            int flipped = bookingRepository.transition(
+                    bookingId, Booking.Status.PENDING, Booking.Status.CANCELLED);
+            if (flipped == 1) {
+                rideRepository.releaseSeats(booking.getRide().getId(), booking.getSeats());
+            }
+        });
+    }
+
     @Transactional(readOnly = true)
     public List<BookingResponse> myBookings(String passengerEmail) {
         User passenger = userRepository.findByEmail(passengerEmail)
