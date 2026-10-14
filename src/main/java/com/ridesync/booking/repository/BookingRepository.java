@@ -30,4 +30,10 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     // Scalar query, so it always reads the database and never a stale cached entity.
     @Query("select b.status from Booking b where b.id = :id")
     Booking.Status statusOf(@Param("id") Long id);
+    @Modifying
+    @Query("update Booking b set b.status = :toStatus "
+            + "where b.ride.id = :rideId and b.status = :fromStatus")
+    int transitionAllForRide(@Param("rideId") Long rideId,
+                             @Param("fromStatus") Booking.Status fromStatus,
+                             @Param("toStatus") Booking.Status toStatus);
 }

@@ -48,4 +48,16 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
     @Query("update Ride r set r.availableSeats = r.availableSeats + :seats "
             + "where r.id = :id and r.availableSeats + :seats <= r.totalSeats")
     int releaseSeats(@Param("id") Long id, @Param("seats") int seats);
+    boolean existsByIdAndDriverId(Long id, Long driverId);
+
+    boolean existsByIdAndStatus(Long id, Ride.Status status);
+
+    // Atomic status change, only for the owning driver and only from the expected status.
+    @Modifying
+    @Query("update Ride r set r.status = :toStatus "
+            + "where r.id = :id and r.driver.id = :driverId and r.status = :fromStatus")
+    int transitionStatus(@Param("id") Long id,
+                         @Param("driverId") Long driverId,
+                         @Param("fromStatus") Ride.Status fromStatus,
+                         @Param("toStatus") Ride.Status toStatus);
 }
