@@ -43,6 +43,26 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
 
+  app:
+    build: .
+    container_name: ridesync-app
+    profiles: ["full"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/ridesync
+      DB_USER: ridesync
+      DB_PASSWORD: ridesync123
+      REDIS_HOST: redis
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-string-at-least-32-bytes-long}
+      PAYMENT_MOCK: ${PAYMENT_MOCK:-true}
+    ports:
+      - "8080:8080"
+
 volumes:
   pgdata:
   redisdata:

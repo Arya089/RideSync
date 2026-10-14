@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RideSync Live Tracker</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  body { margin: 0; font-family: system-ui, sans-serif; }
+  #panel { padding: 12px; background: #f4f6f8; border-bottom: 1px solid #ddd; }
+  #panel input, #panel textarea { width: 100%; box-sizing: border-box; margin: 4px 0; padding: 6px; }
+  #panel button { margin: 4px 6px 4px 0; padding: 8px 14px; cursor: pointer; }
+  #status { font-size: 14px; color: #333; margin-top: 6px; }
+  #map { height: calc(100vh - 220px); min-height: 300px; }
+</style>
+</head>
+<body>
+<div id="panel">
+  <input id="ride" placeholder="Ride id (e.g. 5)">
+  <textarea id="token" rows="2" placeholder="Paste a JWT: the driver's token to Drive, a confirmed passenger's token to Watch"></textarea>
+  <button onclick="watchRide()">Watch (passenger)</button>
+  <button onclick="startDriving()">Drive (driver, simulated route)</button>
+  <button onclick="stopAll()">Stop</button>
+  <div id="status">Not connected</div>
+</div>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const map = L.map('map').setView([12.63, 77.1], 8);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  const el = id => document.getElementById(id);
+  let ws = null, marker = null, timer = null;
+
+  function setStatus(text) { el('status').textContent = text; }
+
+  function openSocket(onOpen) {
+    stopAll();
+    const rideId = el('ride').value.trim();
+    const token = el('token').value.trim();
+    if (!rideId || !token) { setStatus('Enter a ride id and a token first'); return; }
+    const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${scheme}://${location.host}/ws/location/${rideId}?token=${encodeURIComponent(token)}`);
+    ws.onopen = () => { setStatus('Connected to ride ' + rideId); if (onOpen) onOpen(); };
+    ws.onclose = () => { setStatus('Disconnected (check the ride id and token, and that you have access)'); clearInterval(timer); };
+    ws.onmessage = e => {
+      const d = JSON.parse(e.data);
+      if (d.error) { setStatus('Server: ' + d.error); return; }
+      show(d.lat, d.lng);
+      setStatus('Live position: ' + d.lat.toFixed(5) + ', ' + d.lng.toFixed(5));
+    };
+  }
+
+  function show(lat, lng) {
+    if (!marker) { marker = L.marker([lat, lng]).addTo(map); } else { marker.setLatLng([lat, lng]); }
+    map.panTo([lat, lng]);
+  }
+
+  function watchRide() { openSocket(null); }
+
+  function startDriving() {
+    openSocket(() => {
+      // Simulated drive: Bangalore -> Mysore in 60 steps, one point per second.
+      const from = [12.9716, 77.5946], to = [12.2958, 76.6394], steps = 60;
+      let i = 0;
+      timer = setInterval(() => {
+        if (i > steps || !ws || ws.readyState !== WebSocket.OPEN) { clearInterval(timer); return; }
+        const f = i / steps;
+        const lat = from[0] + (to[0] - from[0]) * f;
+        const lng = from[1] + (to[1] - from[1]) * f;
+        ws.send(JSON.stringify({ lat: lat, lng: lng }));
+        show(lat, lng);
+        i++;
+      }, 1000);
+    });
+  }
+
+  function stopAll() {
+    clearInterval(timer);
+    if (ws) { ws.close(); ws = null; }
+  }
+</script>
+</body>
+</html>
