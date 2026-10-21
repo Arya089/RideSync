@@ -191,6 +191,7 @@ Tested end to end against a running instance:
 - **Expiry:** stale unpaid bookings are cancelled by the scheduler and their seats are released.
 - **Ride lifecycle:** only the owning driver can start or complete a ride; completing it marks the confirmed bookings `COMPLETED`.
 - **Tracking access:** WebSocket connections without a token, or from a user with no confirmed booking, are refused.
+- **Live tracking:** a point sent by the driver over WebSocket is delivered to a connected passenger; a passenger who joins later receives the last position from Redis; passengers cannot send, out-of-range coordinates are rejected, and sending is refused once the ride is completed.
 - **Access control:** drivers cannot book, passengers cannot post rides (`403`), and protected endpoints without a token return `401`.
 - **Container run:** the full stack starts from one command and the health endpoint reports `UP`.
 
